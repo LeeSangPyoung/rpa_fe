@@ -3,7 +3,7 @@ import { Plus, Minus } from 'lucide-react'
 import ConfirmDialog from './ConfirmDialog'
 
 const GROUPS = [
-  { id: 1, name: '기본 그룹' },
+  { id: 1, name: '한전사용자 그룹' },
   { id: 2, name: '특수 그룹' },
   { id: 3, name: '외부 연동' },
   { id: 4, name: '테스트 그룹' },
