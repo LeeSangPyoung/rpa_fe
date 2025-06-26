@@ -125,6 +125,8 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
       // 기존 ACTION 모드: 기존 로직 유지
       const base = Date.now() - Math.random() * 10 * 24 * 60 * 60 * 1000
       const count = 3 // 항상 3개
+      const stepNames = ['엑셀다운로드', '엑셀업로드', '첨부파일다운']
+      const stepDescriptions = ['엑셀 다운로드 설명', '엑셀 업로드 설명', '첨부파일 다운로드 설명']
       const sampleSteps = Array.from({ length: count }, (_, idx) => {
         return {
           id: `step-${idx + 1}`,
@@ -144,6 +146,8 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
           regDate: randomDate(base - Math.random() * 5 * 24 * 60 * 60 * 1000),
           modUser: `user${(idx % 5) + 1}`,
           modDate: randomDate(base - Math.random() * 2 * 24 * 60 * 60 * 1000),
+          name: stepNames[idx % stepNames.length],
+          description: stepDescriptions[idx % stepDescriptions.length],
         }
       })
       setSteps(sampleSteps)
@@ -353,12 +357,15 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
     document.removeEventListener('mouseup', handleResizeEnd)
   }
 
+  const stepNames = ['엑셀다운로드', '엑셀업로드', '첨부파일다운']
   const handleStepAdd = () => {
     console.log('handleStepAdd called')
+    const idx = steps.length % stepNames.length
     const newStep = {
       id: `step-${Date.now()}`,
       no: '',
       order: '',
+      name: '',
       type: '',
       scriptPath: '',
       scriptFile: '',
@@ -373,20 +380,13 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
       regDate: formatDate(new Date()),
       modUser: username,
       modDate: formatDate(new Date()),
+      description: '',
     }
-    console.log('New step:', newStep)
-    setSteps(prev => {
-      console.log('Previous steps:', prev)
-      const newSteps = [...prev, newStep]
-      console.log('New steps:', newSteps)
-      return newSteps
-    })
+    setSteps(prev => [...prev, newStep])
     setStepParams(prev => ({ ...prev, [newStep.id]: [{ no: 1, param: '', value: '' }] }))
     setSelectedStep(newStep)
-    // 새 STEP 추가 시 RPA 실행결과 완전 초기화
     setExecutionResults([])
     setSelectedStepForResults(null)
-    // 새 STEP이 추가될 페이지 계산
     const newStepPage = Math.ceil((steps.length + 1) / STEP_PAGE_SIZE)
     setStepPage(newStepPage)
   }
@@ -456,7 +456,7 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
             <div>
               <label className="block text-gray-500">RPA명</label>
               <input 
-                className="w-full px-2 py-1 border border-gray-200 rounded text-xs" 
+                className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" 
                 value={isNewAction ? '' : displayItem.rpaName} 
                 readOnly={!isNewAction}
                 placeholder={isNewAction ? "RPA명 입력" : ""}
@@ -465,7 +465,7 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
             <div>
               <label className="block text-gray-500">스케줄링</label>
               <input 
-                className="w-full px-2 py-1 border border-gray-200 rounded text-xs" 
+                className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" 
                 value={isNewAction ? '' : displayItem.scheduling} 
                 readOnly={!isNewAction}
                 placeholder={isNewAction ? "스케줄링 입력" : ""}
@@ -482,7 +482,7 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
             <div>
               <label className="block text-gray-500">반복유무</label>
               <select
-                className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
+                className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8"
                 value={repeat}
                 onChange={e => setRepeat(e.target.value)}
               >
@@ -494,7 +494,7 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
               <label className="block text-gray-500">시작일시</label>
               <input
                 type="datetime-local"
-                className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
+                className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8"
                 value={startAt}
                 onChange={e => setStartAt(e.target.value)}
               />
@@ -503,7 +503,7 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
               <label className="block text-gray-500">종료일시</label>
               <input
                 type="datetime-local"
-                className="w-full px-2 py-1 border border-gray-200 rounded text-xs"
+                className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8"
                 value={endAt}
                 onChange={e => setEndAt(e.target.value)}
               />
@@ -511,7 +511,7 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
             <div className="md:col-span-2 lg:col-span-4">
               <label className="block text-gray-500">설명</label>
               <textarea 
-                className="w-full px-2 py-1 border border-gray-200 rounded text-xs" 
+                className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" 
                 value={isNewAction ? '' : displayItem.description} 
                 readOnly={!isNewAction}
                 placeholder={isNewAction ? "설명 입력" : ""}
@@ -554,19 +554,19 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
                       onMouseDown={(e) => handleResizeStart(e, 'no')}
                     />
                   </th>
-                  <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: `${columnWidths.order}px` }}>
+                  <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: `${columnWidths.order || 60}px` }}>
                     순서
                     <div 
                       className="absolute top-0 right-0 w-0.5 h-full bg-transparent hover:bg-blue-400 cursor-col-resize"
                       onMouseDown={(e) => handleResizeStart(e, 'order')}
                     />
                   </th>
-                  <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: `${columnWidths.type}px` }}>
+                  <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: '180px' }}>
+                    STEP명
+                  </th>
+                  <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: '120px' }}>
                     RPA구분
-                    <div 
-                      className="absolute top-0 right-0 w-0.5 h-full bg-transparent hover:bg-blue-400 cursor-col-resize"
-                      onMouseDown={(e) => handleResizeStart(e, 'type')}
-                    />
+                    <div className="absolute top-0 right-0 w-0.5 h-full bg-transparent hover:bg-blue-400 cursor-col-resize" onMouseDown={(e) => handleResizeStart(e, 'type')} />
                   </th>
                   <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: `${columnWidths.scriptPath}px` }}>
                     실행스크립트위치
@@ -584,10 +584,6 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
                   </th>
                   <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: `${columnWidths.accountGroup}px` }}>
                     계정그룹명
-                    <div 
-                      className="absolute top-0 right-0 w-0.5 h-full bg-transparent hover:bg-blue-400 cursor-col-resize"
-                      onMouseDown={(e) => handleResizeStart(e, 'accountGroup')}
-                    />
                   </th>
                   <th className="px-2 py-2 relative whitespace-nowrap" style={{ width: `${columnWidths.repeatByAccount}px` }}>
                     계정별반복유무
@@ -677,8 +673,9 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
                       />
                     </td>
                     <td className="px-2 py-2 text-center" style={{ width: `${columnWidths.no}px` }}>{step.no}</td>
-                    <td className="px-2 py-2 text-center" style={{ width: `${columnWidths.order}px` }}>{step.order}</td>
-                    <td className="px-2 py-2 text-center" style={{ width: `${columnWidths.type}px` }}>{step.type}</td>
+                    <td className="px-2 py-2 text-center" style={{ width: `${columnWidths.order || 60}px` }}>{step.order}</td>
+                    <td className="px-2 py-2 text-center" style={{ width: '180px' }}>{step.name || ''}</td>
+                    <td className="px-2 py-2 text-center" style={{ width: '120px' }}>{step.type}</td>
                     <td className="px-2 py-2 truncate" style={{ width: `${columnWidths.scriptPath}px` }} title={step.scriptPath}>{step.scriptPath}</td>
                     <td className="px-2 py-2 truncate" style={{ width: `${columnWidths.scriptFile}px` }} title={step.scriptFile}>{step.scriptFile}</td>
                     <td className="px-2 py-2 text-center" style={{ width: `${columnWidths.accountGroup}px` }}>{step.accountGroup}</td>
@@ -783,47 +780,58 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* 왼쪽: STEP 상세내용 (compact grid, 일부 체크박스/한줄 배치) */}
                   <div className="flex-1 min-w-[250px]">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 items-center text-xs">
-                      <div>
+                    <div className="flex gap-2 mb-2 text-xs">
+                      <div style={{ flexBasis: '20%' }}>
                         <label className="block text-gray-500">순서</label>
-                        <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs" value={selectedStep.order} onChange={e => setSelectedStep(s => ({ ...s, order: e.target.value }))} />
+                        <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" value={selectedStep.order} onChange={e => setSelectedStep(s => ({ ...s, order: e.target.value }))} />
                       </div>
-                      <div>
+                      <div style={{ flexBasis: '30%' }}>
                         <label className="block text-gray-500">RPA구분</label>
-                        <select className="w-full px-2 py-1 border border-gray-200 rounded text-xs" value={selectedStep.type} onChange={e => setSelectedStep(s => ({ ...s, type: e.target.value }))}>
+                        <select className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" value={selectedStep.type} onChange={e => setSelectedStep(s => ({ ...s, type: e.target.value }))}>
                           {STEP_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
-                      <div className="flex flex-col">
-                        <label className="block text-gray-500 mb-1">병렬처리</label>
-                        <input type="checkbox" className="h-4 w-4" checked={selectedStep.parallel} onChange={e => setSelectedStep(s => ({ ...s, parallel: e.target.checked }))} />
+                      <div style={{ flexBasis: '50%' }}>
+                        <label className="block text-gray-500">STEP명</label>
+                        <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" value={selectedStep.name || ''} onChange={e => setSelectedStep(s => ({ ...s, name: e.target.value }))} />
                       </div>
-                      <div className="flex flex-col">
-                        <label className="block text-gray-500 mb-1">계정별반복유무</label>
-                        <input type="checkbox" className="h-4 w-4" checked={selectedStep.repeatByAccount} onChange={e => setSelectedStep(s => ({ ...s, repeatByAccount: e.target.checked }))} />
+                    </div>
+                    <div className="flex w-full mb-2">
+                      <div className="flex items-center gap-2 w-1/2">
+                        <input className="flex-1 px-2 border border-gray-200 rounded text-xs h-8" value={selectedStep.accountGroup} readOnly />
+                        <button type="button" className="flex-1 h-8 bg-gray-200 text-gray-700 rounded text-xs" onClick={() => setShowGroupModal(true)}>
+                          계정그룹 설정
+                        </button>
                       </div>
-                      {/* 실행스크립트위치/파일명 한 줄 배치 */}
-                      <div className="md:col-span-2 lg:col-span-4 flex gap-2 items-center">
-                        <div className="flex-1">
-                          <label className="block text-gray-500">실행스크립트위치</label>
-                          <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs" value={selectedStep.scriptPath} onChange={e => setSelectedStep(s => ({ ...s, scriptPath: e.target.value }))} />
-                        </div>
-                        <div className="flex-1">
-                          <label className="block text-gray-500">실행스크립트파일명</label>
-                          <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs" value={selectedStep.scriptFile} onChange={e => setSelectedStep(s => ({ ...s, scriptFile: e.target.value }))} />
-                        </div>
+                      <div className="flex items-center gap-12 w-1/2 text-xs mr-4 justify-end">
+                        <label className="text-gray-500 flex items-center gap-1 m-0 ml-[-8px]">
+                          <input type="checkbox" className="h-4 w-4" checked={selectedStep.parallel} onChange={e => setSelectedStep(s => ({ ...s, parallel: e.target.checked }))} />
+                          병렬처리
+                        </label>
+                        <label className="text-gray-500 flex items-center gap-1 m-0">
+                          <input type="checkbox" className="h-4 w-4" checked={selectedStep.repeatByAccount} onChange={e => setSelectedStep(s => ({ ...s, repeatByAccount: e.target.checked }))} />
+                          계정별반복유무
+                        </label>
                       </div>
-                      <div className="md:col-span-2 lg:col-span-4">
-                        <label className="block text-gray-500">실행스크립트생성위치</label>
-                        <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs" value={selectedStep.scriptGenPath} onChange={e => setSelectedStep(s => ({ ...s, scriptGenPath: e.target.value }))} />
+                    </div>
+                    {/* 실행스크립트위치/파일명 한 줄 배치 */}
+                    <div className="flex gap-2 mb-2">
+                      <div className="flex-1">
+                        <label className="block text-gray-500 text-xs mb-1">실행스크립트위치</label>
+                        <input className="h-8 px-2 border border-gray-200 rounded text-xs w-full" value={selectedStep.scriptPath} onChange={e => setSelectedStep(s => ({ ...s, scriptPath: e.target.value }))} />
                       </div>
-                      <div>
-                        <label className="block text-gray-500">계정그룹명</label>
-                        <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs" value={selectedStep.accountGroup} readOnly />
+                      <div className="flex-1">
+                        <label className="block text-gray-500 text-xs mb-1">실행스크립트파일명</label>
+                        <input className="h-8 px-2 border border-gray-200 rounded text-xs w-full" value={selectedStep.scriptFile} onChange={e => setSelectedStep(s => ({ ...s, scriptFile: e.target.value }))} />
                       </div>
-                      <div className="flex items-end h-full">
-                        <button type="button" className="h-8 px-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs" onClick={() => setShowGroupModal(true)}>계정그룹 설정</button>
-                      </div>
+                    </div>
+                    <div className="md:col-span-2 lg:col-span-4 text-xs mb-2">
+                      <label className="block text-gray-500">실행스크립트생성위치</label>
+                      <input className="w-full px-2 py-1 border border-gray-200 rounded text-xs h-8" value={selectedStep.scriptGenPath} onChange={e => setSelectedStep(s => ({ ...s, scriptGenPath: e.target.value }))} />
+                    </div>
+                    <div className="md:col-span-2 lg:col-span-4 text-xs mb-2">
+                      <label className="block text-gray-500">설명</label>
+                      <input className="w-full px-2 border border-gray-200 rounded text-xs h-8" value={selectedStep.description || ''} onChange={e => setSelectedStep(s => ({ ...s, description: e.target.value }))} />
                     </div>
                   </div>
                   {/* 오른쪽: 파라미터 테이블 (기존 구조, border 없음) */}
@@ -847,8 +855,8 @@ const DetailPage = ({ item, onBack, username, onLogout, isNewAction = false }) =
                         {(stepParams[selectedStep.id] || []).map((param, idx) => (
                           <tr key={idx}>
                             <td className="px-2 py-1 text-center">{param.no}</td>
-                            <td className="px-2 py-1"><input className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs" value={param.param} onChange={e => handleParamChange(idx, 'param', e.target.value)} /></td>
-                            <td className="px-2 py-1"><input className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs" value={param.value} onChange={e => handleParamChange(idx, 'value', e.target.value)} /></td>
+                            <td className="px-2 py-1"><input className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs h-8" value={param.param} onChange={e => handleParamChange(idx, 'param', e.target.value)} /></td>
+                            <td className="px-2 py-1"><input className="w-full px-1 py-0.5 border border-gray-200 rounded text-xs h-8" value={param.value} onChange={e => handleParamChange(idx, 'value', e.target.value)} /></td>
                             <td className="px-2 py-1 text-center">
                               <button className="text-red-500 hover:text-red-700" onClick={e => { e.preventDefault(); handleParamDelete(idx) }}><Minus className="h-3 w-3" /></button>
                             </td>
